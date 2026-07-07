@@ -17,5 +17,9 @@
   "bugs": {
     "url": "https://github.com/kasasagi31/OW-map-bot/issues"
   },
-  "homepage": "https://github.com/kasasagi31/OW-map-bot#readme"
+  "homepage": "https://github.com/kasasagi31/OW-map-bot#readme",
+  "dependencies": {
+    "discord.js": "^14.26.4",
+    "dotenv": "^17.4.2"
+  }
 }
