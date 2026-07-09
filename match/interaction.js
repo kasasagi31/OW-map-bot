@@ -101,6 +101,7 @@ function buildTeamArgs(match, forcedSpectators = []) {
     spectatorLock: match.spectatorLock || [],
     forcedSpectators,
     targetDiff: getRankDiffLimit(),
+    teamHistory: match.teamHistory || [],
   };
 }
 
@@ -258,7 +259,14 @@ if (interaction.customId === "config_vc_move_off") {
     const allUsers = getMatchParticipants(match.eventMessageId);
 
     commitRotationResult(match, allUsers);
-commitMap(match.map);
+    commitMap(match.map);
+
+match.teamHistory = match.teamHistory || [];
+match.teamHistory.push({
+  teamA: match.teamA || [],
+  teamB: match.teamB || [],
+});
+match.teamHistory = match.teamHistory.slice(-5);
 
 match.status = "started";
 saveMatch(matchData);

@@ -1,8 +1,11 @@
 const { getUserRanks } = require("../rankManager");
 const { getEventData } = require("../eventManager");
+const {
+  getTeamHistoryPenalty,
+} = require("./history");
 
 const TARGET_DIFF = 500;
-const MAX_TRIES = 50;
+const MAX_TRIES = 1000;
 
 function extractUserId(text) {
   if (!text) return null;
@@ -126,6 +129,7 @@ function makeTeams({
   spectatorLock = [],
   forcedSpectators = [],
   targetDiff = TARGET_DIFF,
+  teamHistory = [],
 }) {
   forcedSpectators = uniqueUsers(forcedSpectators);
   spectatorLock = uniqueUsers([...spectatorLock, ...forcedSpectators]);
@@ -176,15 +180,28 @@ function makeTeams({
       reachedTarget: diff <= targetDiff,
     };
 
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      bestResult = currentResult;
-    }
+    const historyPenalty = getTeamHistoryPenalty(
+  result.teamA,
+  result.teamB,
+  teamHistory
+);
 
-    if (diff <= targetDiff) {
-      return currentResult;
-    }
-  }
+currentResult.historyPenalty = historyPenalty;
+
+console.log({
+  diff,
+  historyPenalty,
+  tryCount,
+});
+
+if (
+  diff < bestDiff ||
+  (diff === bestDiff && historyPenalty < bestPenalty)
+) {
+  bestDiff = diff;
+  bestPenalty = historyPenalty;
+  bestResult = currentResult;
+}
 
   if (!bestResult) {
     return {
