@@ -78,13 +78,6 @@ function sortCandidates(candidates, rotation) {
       return dataB.playStreak - dataA.playStreak;
     }
 
-    const rateA = getSpectatorRate(dataA);
-    const rateB = getSpectatorRate(dataB);
-
-    if (rateA !== rateB) {
-      return rateA - rateB;
-    }
-
     if (dataA.rotationSpectatorCount !== dataB.rotationSpectatorCount) {
       return dataA.rotationSpectatorCount - dataB.rotationSpectatorCount;
     }
