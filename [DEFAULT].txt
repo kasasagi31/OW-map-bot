@@ -1,0 +1,6 @@
+[DEFAULT]
+user=ocid1.user.oc1..aaaaaaaaujdn66q77dph6oke6cqq3wembn6f54brtn4532vvatydsj2s3tqa
+fingerprint=27:dc:6f:f1:d3:fd:4a:70:20:6c:86:6d:5e:37:33:ba
+tenancy=ocid1.tenancy.oc1..aaaaaaaanb5tey6mywji4xtymycnepgykcsndeyew3nkangz2ujqq3pbesba
+region=ap-tokyo-1
+key_file=<path to your private keyfile> # TODO

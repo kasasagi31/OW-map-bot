@@ -1,0 +1,19 @@
+{
+  "1276162125575753859": {
+    "support": {
+      "tier": "gold",
+      "division": 4,
+      "point": 2100
+    },
+    "dps": {
+      "tier": "silver",
+      "division": 5,
+      "point": 1500
+    },
+    "tank": {
+      "tier": "bronze",
+      "division": 5,
+      "point": 1000
+    }
+  }
+}
