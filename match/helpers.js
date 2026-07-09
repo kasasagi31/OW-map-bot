@@ -39,6 +39,7 @@ function createEmbedFromMatch(match) {
     teamB: match.teamB || [],
     spectators: match.spectators || [],
     map: match.map,
+    matchNumber: match.matchNumber || 1,
     tryCount: match.tryCount,
     targetDiff: match.targetDiff,
     maxTries: match.maxTries,
