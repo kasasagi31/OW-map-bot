@@ -63,6 +63,7 @@ function makeMatchEmbed({
   spectators,
   map,
   status = "waiting",
+  matchNumber = 1,
   tryCount,
   reachedTarget,
   targetDiff,
@@ -88,7 +89,7 @@ function makeMatchEmbed({
       : "";
 
   return new EmbedBuilder()
-    .setTitle(`${view.title}｜${map}`)
+    .setTitle(`${view.title} | ${map} | 第${matchNumber}試合`))
     .setColor(view.color)
     .setDescription(`🎲 平均差 ${diff}　${trialText}${warningText}`)
     .addFields(

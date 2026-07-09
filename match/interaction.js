@@ -325,6 +325,7 @@ await returnMatchMembers(interaction.guild, match);
 
     applyTeamResultToMatch(match, result);
     match.map = pickedMap;
+    match.matchNumber = (match.matchNumber || 1) + 1;
     match.status = "waiting";
 
     saveMatch(matchData);

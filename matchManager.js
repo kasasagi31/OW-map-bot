@@ -74,18 +74,20 @@ async function handleMatchStart(interaction) {
   const { pickedMap } = pickRandomMap();
 
   const tempMatch = {
-    eventMessageId,
-    channelId: interaction.channelId,
-    map: pickedMap,
-    status: "ready",
-    result: null,
-    rotationQueue: [],
-    aLock,
-    bLock,
-    aPrefer: [],
-    bPrefer: [],
-    spectatorLock,
-  };
+  eventMessageId,
+  channelId: interaction.channelId,
+  map: pickedMap,
+  status: "ready",
+  result: null,
+  rotationQueue: [],
+  aLock,
+  bLock,
+  aPrefer: [],
+  bPrefer: [],
+  spectatorLock,
+
+  matchNumber: 1, // ←追加
+};
 
   const allUsers = getMatchParticipants(eventMessageId);
   ensureRotation(tempMatch, allUsers);
