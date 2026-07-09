@@ -1,3 +1,12 @@
 .env
 node_modules/
 mapData.json
+
+.env
+node_modules/
+*.key
+
+eventData.json
+matchData.json
+rankData.json
+matchSettings.json
