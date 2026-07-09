@@ -233,8 +233,9 @@ if (interaction.customId === "config_vc_move_off") {
 
     applyTeamResultToMatch(match, result);
     match.map = pickedMap;
-
     saveMatch(matchData);
+
+    console.log("matchNumber =", match.matchNumber);
 
     await interaction.update({
       embeds: [createEmbedFromMatch(match)],
