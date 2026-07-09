@@ -89,7 +89,7 @@ function makeMatchEmbed({
       : "";
 
   return new EmbedBuilder()
-    .setTitle(`${view.title} | ${map} | 第${matchNumber}試合`))
+    .setTitle(`${view.title} | ${map} | 第${matchNumber}試合`)
     .setColor(view.color)
     .setDescription(`🎲 平均差 ${diff}　${trialText}${warningText}`)
     .addFields(
