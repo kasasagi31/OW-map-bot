@@ -11,7 +11,10 @@ const { getEventData } = require("../eventManager");
 const { handleMatchUserSelect } = require("./userSelect");
 const { isTeamChoiceAction } = require("../components/buttons");
 const { handleTeamChoiceButton } = require("./locks");
-
+const {
+  decideRotationSpectators,
+  commitRotationResult,
+} = require("./rotation");
 
 const {
   makeMatchEmbed,
@@ -59,56 +62,7 @@ function getMatchParticipants(eventMessageId) {
   return uniqueUsers([...joined, ...late]);
 }
 
-function updateRotationQueue(match, allUsers) {
-  const lockedUsers = uniqueUsers([
-    ...(match.aLock || []),
-    ...(match.bLock || []),
-    ...(match.spectatorLock || []),
-  ]);
 
-  const rotationUsers = allUsers.filter((id) => !lockedUsers.includes(id));
-  const oldQueue = match.rotationQueue || [];
-  const newQueue = oldQueue.filter((id) => rotationUsers.includes(id));
-
-  for (const id of rotationUsers) {
-    if (!newQueue.includes(id)) {
-      newQueue.push(id);
-    }
-  }
-
-  match.rotationQueue = newQueue;
-}
-
-function pickRotationSpectators(match, allUsers) {
-  updateRotationQueue(match, allUsers);
-
-  const fixedPlayers = uniqueUsers([
-    ...(match.aLock || []),
-    ...(match.bLock || []),
-  ]);
-
-  const fixedSpectators = uniqueUsers(match.spectatorLock || []);
-  const playableUsers = allUsers.filter((id) => !fixedSpectators.includes(id));
-
-  const needSpectators = Math.max(0, playableUsers.length - 10);
-  const picked = [];
-
-  while (picked.length < needSpectators && match.rotationQueue.length > 0) {
-    const userId = match.rotationQueue.shift();
-
-    if (
-      allUsers.includes(userId) &&
-      !fixedPlayers.includes(userId) &&
-      !fixedSpectators.includes(userId)
-    ) {
-      picked.push(userId);
-    }
-  }
-
-  match.rotationQueue.push(...picked);
-
-  return picked;
-}
 
 function applyTeamResultToMatch(match, result) {
   match.teamA = result.teamA;
@@ -253,7 +207,7 @@ if (
 
   if (interaction.customId === "match_all_reroll") {
     const allUsers = getMatchParticipants(match.eventMessageId);
-    const rotationSpectators = pickRotationSpectators(match, allUsers);
+    const rotationSpectators = decideRotationSpectators(match, allUsers);
     const result = makeTeams(buildTeamArgs(match, rotationSpectators));
 
     if (result.error) {
@@ -277,21 +231,25 @@ if (
   }
 
   if (interaction.customId === "match_start_game") {
-    match.status = "in_game";
-    saveMatch(matchData);
+  const allUsers = getMatchParticipants(match.eventMessageId);
 
-    const oldEmbed = interaction.message.embeds[0];
-    const newEmbed = EmbedBuilder.from(oldEmbed)
-      .setColor(0xfaa61a)
-      .setFooter({ text: "試合中" });
+  commitRotationResult(match, allUsers);
 
-    await interaction.update({
-      embeds: [newEmbed],
-      components: [makeInGameButtons()],
-    });
+  match.status = "in_game";
+  saveMatch(matchData);
 
-    return true;
-  }
+  const oldEmbed = interaction.message.embeds[0];
+  const newEmbed = EmbedBuilder.from(oldEmbed)
+    .setColor(0xfaa61a)
+    .setFooter({ text: "試合中" });
+
+  await interaction.update({
+    embeds: [newEmbed],
+    components: [makeInGameButtons()],
+  });
+
+  return true;
+}
 
   if (interaction.customId === "match_end_game") {
     match.status = "ended";
@@ -341,7 +299,7 @@ if (
 
   if (interaction.customId === "match_next") {
     const allUsers = getMatchParticipants(match.eventMessageId);
-    const rotationSpectators = pickRotationSpectators(match, allUsers);
+    const rotationSpectators = decideRotationSpectators(match, allUsers);
     const result = makeTeams(buildTeamArgs(match, rotationSpectators));
 
     if (result.error) {

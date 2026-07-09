@@ -174,14 +174,16 @@ async function handleInteraction(interaction) {
 
     const handled = await handleEventInteraction(interaction);
     if (handled) return;
-  } catch (err) {
+    } catch (err) {
     console.error("interactionCreate エラー:", err);
 
     if (!interaction.replied && !interaction.deferred) {
-      await interaction.reply({
-        content: "エラーが出たよ。コンソールを確認してね。",
-        ephemeral: true,
-      });
+      try {
+        await interaction.reply({
+          content: "エラーが出たよ。コンソールを確認してね。",
+          ephemeral: true,
+        });
+      } catch {}
     }
   }
 }

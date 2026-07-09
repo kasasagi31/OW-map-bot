@@ -27,8 +27,7 @@ const {
   applyTeamResultToMatch,
   createEmbedFromMatch,
 } = require("./match/helpers");
-
-const { updateRotationQueue } = require("./match/rotation");
+const { ensureRotation } = require("./match/rotation");
 
 async function handleMatchStart(interaction) {
   await interaction.deferReply();
@@ -86,7 +85,7 @@ async function handleMatchStart(interaction) {
   };
 
   const allUsers = getMatchParticipants(eventMessageId);
-  updateRotationQueue(tempMatch, allUsers, uniqueUsers);
+  ensureRotation(tempMatch, allUsers);
   applyTeamResultToMatch(tempMatch, result);
 
   const reply = await interaction.editReply({
