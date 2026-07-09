@@ -79,6 +79,7 @@ function createEmbedFromMatch(match) {
     spectators: match.spectators || [],
     map: match.map,
     status: match.status || "waiting",
+    matchNumber: match.matchNumber || 1, // ←これ追加
     tryCount: match.tryCount,
     targetDiff: match.targetDiff,
     maxTries: match.maxTries,
@@ -90,7 +91,6 @@ function createEmbedFromMatch(match) {
     spectatorLock: match.spectatorLock || [],
   });
 }
-
 function buildTeamArgs(match, forcedSpectators = []) {
   return {
     eventMessageId: match.eventMessageId,
