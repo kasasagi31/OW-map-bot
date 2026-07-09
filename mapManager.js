@@ -76,22 +76,21 @@ function resetMaps() {
 }
 
 function pickRandomMap() {
-  let wasReset = false;
-
   if (mapData.remainingMaps.length === 0) {
-    resetMaps();
-    wasReset = true;
+    return {
+      pickedMap: allMaps[Math.floor(Math.random() * allMaps.length)],
+      wasReset: false,
+    };
   }
 
-  const index = Math.floor(Math.random() * mapData.remainingMaps.length);
-  const pickedMap = mapData.remainingMaps.splice(index, 1)[0];
-
-  mapData.history.push(pickedMap);
-  saveData();
-
-  return { pickedMap, wasReset };
+  return {
+    pickedMap:
+      mapData.remainingMaps[
+        Math.floor(Math.random() * mapData.remainingMaps.length)
+      ],
+    wasReset: false,
+  };
 }
-
 function undoLastMap() {
   if (mapData.history.length === 0) return null;
 
@@ -146,10 +145,34 @@ function getAllMaps() {
   return allMaps;
 }
 
+function commitMap(map) {
+  let wasReset = false;
+
+  if (mapData.remainingMaps.length === 0) {
+    resetMaps();
+    wasReset = true;
+  }
+
+  const index = mapData.remainingMaps.indexOf(map);
+
+  if (index !== -1) {
+    mapData.remainingMaps.splice(index, 1);
+  }
+
+  if (!mapData.history.includes(map)) {
+    mapData.history.push(map);
+  }
+
+  saveData();
+
+  return { wasReset };
+}
+
 module.exports = {
   loadData,
   resetMaps,
   pickRandomMap,
+  commitMap,
   undoLastMap,
   makeList,
   getMapData,

@@ -20,35 +20,41 @@ const TEST_USER_NAMES = {
   "100000000000000010": "sian",
 };
 
-
 function formatUser(id) {
   if (!id) return "不明";
   if (TEST_USER_NAMES[id]) return TEST_USER_NAMES[id];
   return `<@${id}>`;
 }
 
-function formatNumberedUsers(users) {
-  if (!users || users.length === 0) return "なし";
-
-  return users.map((id, index) => `${index + 1}. ${formatUser(id)}`).join("\n");
+function hasId(list, id) {
+  return Array.isArray(list) && list.includes(id);
 }
 
-function makeLockText(match) {
-  const aLock = formatNumberedUsers(match.aLock || []);
-  const bLock = formatNumberedUsers(match.bLock || []);
-  const aPrefer = formatNumberedUsers(match.aPrefer || []);
-  const bPrefer = formatNumberedUsers(match.bPrefer || []);
-  const spectatorLock = formatNumberedUsers(match.spectatorLock || []);
+function getLockIcon(id, match) {
+  if (hasId(match.aLock, id) || hasId(match.bLock, id)) return " 🔒";
+  if (hasId(match.aPrefer, id) || hasId(match.bPrefer, id)) return " 📌";
+  if (hasId(match.spectatorLock, id)) return " 👀";
+  return "";
+}
 
-  return (
-    `\n\n🔒 **完全固定**\n` +
-    `🟦 A固定\n${aLock}\n` +
-    `🟥 B固定\n${bLock}\n\n` +
-    `📌 **所属固定**\n` +
-    `🟦 A所属\n${aPrefer}\n` +
-    `🟥 B所属\n${bPrefer}\n\n` +
-    `👀 **観戦固定**\n${spectatorLock}`
-  );
+function formatNumberedUsers(users, match = {}) {
+  if (!users || users.length === 0) return "なし";
+
+  return users
+    .map((id, index) => `${index + 1}. ${formatUser(id)}${getLockIcon(id, match)}`)
+    .join("\n");
+}
+
+function getStatusView(status) {
+  if (status === "started") {
+    return { title: "🟢 試合中", color: 0xfaa61a };
+  }
+
+  if (status === "ended") {
+    return { title: "🔴 試合終了", color: 0xed4245 };
+  }
+
+  return { title: "🎮 試合準備中", color: 0x5865f2 };
 }
 
 function makeMatchEmbed({
@@ -56,6 +62,7 @@ function makeMatchEmbed({
   teamB,
   spectators,
   map,
+  status = "waiting",
   tryCount,
   reachedTarget,
   targetDiff,
@@ -70,9 +77,10 @@ function makeMatchEmbed({
   const avgB = getAverage(teamB);
   const diff = Math.abs(avgA - avgB);
 
-  const trialText = tryCount
-    ? `🎲 抽選：${tryCount}回目で決定`
-    : "🎲 抽選：記録なし";
+  const match = { aLock, bLock, aPrefer, bPrefer, spectatorLock };
+  const view = getStatusView(status);
+
+  const trialText = tryCount ? `抽選${tryCount}回目` : "抽選記録なし";
 
   const warningText =
     reachedTarget === false
@@ -80,18 +88,29 @@ function makeMatchEmbed({
       : "";
 
   return new EmbedBuilder()
-    .setTitle("🎮 試合開始")
-    .setColor(0x5865f2)
-    .setDescription(
-      `🗺 **${map}**\n\n` +
-        `🟦 Team A 平均 ${avgA}\n${formatNumberedUsers(teamA)}\n\n` +
-        `🟥 Team B 平均 ${avgB}\n${formatNumberedUsers(teamB)}\n\n` +
-        `👀 観戦\n${formatNumberedUsers(spectators)}\n\n` +
-        `平均差：${diff}\n` +
-        trialText +
-        warningText +
-        makeLockText({ aLock, bLock, aPrefer, bPrefer, spectatorLock })
-    );
+    .setTitle(`${view.title}｜${map}`)
+    .setColor(view.color)
+    .setDescription(`🎲 平均差 ${diff}　${trialText}${warningText}`)
+    .addFields(
+      {
+        name: `🟦 Team A（平均${avgA}）`,
+        value: formatNumberedUsers(teamA, match),
+        inline: true,
+      },
+      {
+        name: `🟥 Team B（平均${avgB}）`,
+        value: formatNumberedUsers(teamB, match),
+        inline: true,
+      },
+      {
+        name: "👀 観戦",
+        value: formatNumberedUsers(spectators, match),
+        inline: false,
+      }
+    )
+    .setFooter({
+      text: "🔒 完全固定　📌 所属固定　👀 観戦固定",
+    });
 }
 
 function makeMatchButtons() {
@@ -162,16 +181,11 @@ function makeResultButtons() {
     new ButtonBuilder()
       .setCustomId("match_result_draw")
       .setLabel("🤝 引き分け")
-      .setStyle(ButtonStyle.Secondary)
-  );
-}
-
-function makeNextMatchButtons() {
-  return new ActionRowBuilder().addComponents(
+      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
-      .setCustomId("match_next")
-      .setLabel("▶ 次試合")
-      .setStyle(ButtonStyle.Success)
+      .setCustomId("match_result_skip")
+      .setLabel("⏭ 記録なしで次へ")
+      .setStyle(ButtonStyle.Secondary)
   );
 }
 
@@ -181,5 +195,4 @@ module.exports = {
   makeMatchExtraButtons,
   makeInGameButtons,
   makeResultButtons,
-  makeNextMatchButtons,
 };

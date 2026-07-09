@@ -1,5 +1,7 @@
-const { getRankDiffLimit } = require("./matchSettings");
-
+const {
+  getRankDiffLimit,
+  getVcMoveEnabled,
+} = require("./matchSettings");
 const {
   ActionRowBuilder,
   ButtonBuilder,
@@ -8,6 +10,7 @@ const {
 
 const { pickRandomMap } = require("./mapManager");
 const { makeTeams } = require("./teamManager");
+const { createMatchConfig } = require("./match/config");
 
 const {
   makeMatchButtons,
@@ -103,40 +106,7 @@ async function handleMatchStart(interaction) {
 }
 
 async function handleMatchConfig(interaction) {
-  const current = getRankDiffLimit();
-
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("config_diff_100")
-      .setLabel("100")
-      .setStyle(current === 100 ? ButtonStyle.Success : ButtonStyle.Secondary),
-
-    new ButtonBuilder()
-      .setCustomId("config_diff_200")
-      .setLabel("200")
-      .setStyle(current === 200 ? ButtonStyle.Success : ButtonStyle.Secondary),
-
-    new ButtonBuilder()
-      .setCustomId("config_diff_300")
-      .setLabel("300")
-      .setStyle(current === 300 ? ButtonStyle.Success : ButtonStyle.Secondary),
-
-    new ButtonBuilder()
-      .setCustomId("config_diff_500")
-      .setLabel("500")
-      .setStyle(current === 500 ? ButtonStyle.Success : ButtonStyle.Secondary),
-
-    new ButtonBuilder()
-      .setCustomId("config_diff_999999")
-      .setLabel("∞")
-      .setStyle(current >= 999999 ? ButtonStyle.Success : ButtonStyle.Secondary)
-  );
-
-  await interaction.reply({
-    content: `⚙️ 現在の許容ランク差：${current >= 999999 ? "∞" : current}`,
-    components: [row],
-    ephemeral: true,
-  });
+  await interaction.reply(createMatchConfig());
 }
 
 module.exports = {

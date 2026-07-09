@@ -4,6 +4,7 @@ const SETTINGS_FILE = "./matchSettings.json";
 
 const defaultSettings = {
   rankDiffLimit: 500,
+  vcMoveEnabled: true,
 };
 
 function loadSettings() {
@@ -41,10 +42,22 @@ function setRankDiffLimit(limit) {
 function getRankDiffLimit() {
   return loadSettings().rankDiffLimit;
 }
+function setVcMoveEnabled(enabled) {
+  const settings = loadSettings();
+  settings.vcMoveEnabled = enabled;
+  saveSettings(settings);
+  return settings;
+}
+
+function getVcMoveEnabled() {
+  return loadSettings().vcMoveEnabled;
+}
 
 module.exports = {
   loadSettings,
   saveSettings,
   setRankDiffLimit,
   getRankDiffLimit,
+  setVcMoveEnabled,
+  getVcMoveEnabled,
 };

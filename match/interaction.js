@@ -1,16 +1,21 @@
 const {
   getRankDiffLimit,
   setRankDiffLimit,
+  setVcMoveEnabled,
 } = require("../matchSettings");
+const { createMatchConfig } = require("./config");
 
-const { EmbedBuilder } = require("discord.js");
-
-const { pickRandomMap } = require("../mapManager");
+const { pickRandomMap, commitMap } = require("../mapManager");
 const { makeTeams } = require("../teamManager");
 const { getEventData } = require("../eventManager");
 const { handleMatchUserSelect } = require("./userSelect");
 const { isTeamChoiceAction } = require("../components/buttons");
 const { handleTeamChoiceButton } = require("./locks");
+const {
+  moveMatchMembers,
+  returnMatchMembers,
+} = require("../vc");
+
 const {
   decideRotationSpectators,
   commitRotationResult,
@@ -22,17 +27,11 @@ const {
   makeMatchExtraButtons,
   makeInGameButtons,
   makeResultButtons,
-  makeNextMatchButtons,
 } = require("./ui");
 
-const {
-  loadMatch,
-  saveMatch,
-} = require("./storage");
+const { loadMatch, saveMatch } = require("./storage");
+const { handleMatchModal } = require("./modals");
 
-const {
-  handleMatchModal,
-} = require("./modals");
 const {
   showSwapUserSelect,
   showTeamLockUserSelect,
@@ -62,8 +61,6 @@ function getMatchParticipants(eventMessageId) {
   return uniqueUsers([...joined, ...late]);
 }
 
-
-
 function applyTeamResultToMatch(match, result) {
   match.teamA = result.teamA;
   match.teamB = result.teamB;
@@ -81,6 +78,7 @@ function createEmbedFromMatch(match) {
     teamB: match.teamB || [],
     spectators: match.spectators || [],
     map: match.map,
+    status: match.status || "waiting",
     tryCount: match.tryCount,
     targetDiff: match.targetDiff,
     maxTries: match.maxTries,
@@ -110,29 +108,45 @@ async function handleMatchInteraction(interaction) {
   if (interaction.isModalSubmit()) {
     return await handleMatchModal(interaction);
   }
-   if (interaction.isUserSelectMenu()) {
-  return await handleMatchUserSelect(interaction, createEmbedFromMatch);
-}
-if (
-  isTeamChoiceAction(interaction, "match_team_lock") ||
-  isTeamChoiceAction(interaction, "match_team_prefer")
-) {
-  return await handleTeamChoiceButton(interaction, createEmbedFromMatch);
-}
+
+  if (interaction.isUserSelectMenu()) {
+    return await handleMatchUserSelect(interaction, createEmbedFromMatch);
+  }
+
+  if (
+    isTeamChoiceAction(interaction, "match_team_lock") ||
+    isTeamChoiceAction(interaction, "match_team_prefer")
+  ) {
+    return await handleTeamChoiceButton(interaction, createEmbedFromMatch);
+  }
+
   if (!interaction.isButton()) return false;
 
-  if (interaction.customId.startsWith("config_diff_")) {
-    const value = Number(interaction.customId.replace("config_diff_", ""));
+if (interaction.customId.startsWith("config_diff_")) {
+  const value = Number(interaction.customId.replace("config_diff_", ""));
 
-    setRankDiffLimit(value);
+  setRankDiffLimit(value);
 
-    await interaction.update({
-      content: `✅ 許容ランク差を ${value >= 999999 ? "∞" : value} に変更しました。`,
-      components: [],
-    });
+  await interaction.update(createMatchConfig());
 
-    return true;
-  }
+  return true;
+}
+
+if (interaction.customId === "config_vc_move_on") {
+  setVcMoveEnabled(true);
+
+  await interaction.update(createMatchConfig());
+
+  return true;
+}
+
+if (interaction.customId === "config_vc_move_off") {
+  setVcMoveEnabled(false);
+
+  await interaction.update(createMatchConfig());
+
+  return true;
+} 
 
   if (!interaction.customId.startsWith("match_")) return false;
 
@@ -148,29 +162,29 @@ if (
   }
 
   if (interaction.customId === "match_swap") {
-  await showSwapUserSelect(interaction);
-  return true;
-}
+    await showSwapUserSelect(interaction);
+    return true;
+  }
 
   if (interaction.customId === "match_team_lock") {
-  await showTeamLockUserSelect(interaction);
-  return true;
-}
+    await showTeamLockUserSelect(interaction);
+    return true;
+  }
 
   if (interaction.customId === "match_team_prefer") {
-  await showTeamPreferUserSelect(interaction);
-  return true;
-}
+    await showTeamPreferUserSelect(interaction);
+    return true;
+  }
 
- if (interaction.customId === "match_spectator_lock") {
-  await showSpectatorLockUserSelect(interaction);
-  return true;
-}
+  if (interaction.customId === "match_spectator_lock") {
+    await showSpectatorLockUserSelect(interaction);
+    return true;
+  }
 
   if (interaction.customId === "match_unlock") {
-  await showUnlockUserSelect(interaction);
-  return true;
-}
+    await showUnlockUserSelect(interaction);
+    return true;
+  }
 
   if (interaction.customId === "match_team_reroll") {
     const result = makeTeams(buildTeamArgs(match));
@@ -229,41 +243,51 @@ if (
 
     return true;
   }
-
   if (interaction.customId === "match_start_game") {
-  const allUsers = getMatchParticipants(match.eventMessageId);
+    if (match.status === "started") {
+      await interaction.deferUpdate();
+      return true;
+    }
 
-  commitRotationResult(match, allUsers);
+    if (match.status === "ended") {
+      await interaction.deferUpdate();
+      return true;
+    }
 
-  match.status = "in_game";
-  saveMatch(matchData);
+    const allUsers = getMatchParticipants(match.eventMessageId);
 
-  const oldEmbed = interaction.message.embeds[0];
-  const newEmbed = EmbedBuilder.from(oldEmbed)
-    .setColor(0xfaa61a)
-    .setFooter({ text: "試合中" });
+    commitRotationResult(match, allUsers);
+commitMap(match.map);
 
-  await interaction.update({
-    embeds: [newEmbed],
-    components: [makeInGameButtons()],
-  });
+match.status = "started";
+saveMatch(matchData);
 
-  return true;
-}
+await interaction.update({
+  embeds: [createEmbedFromMatch(match)],
+  components: [makeInGameButtons()],
+});
+
+// VC自動移動は画面更新後に実行
+await moveMatchMembers(interaction.guild, match);
+    return true;
+  }
 
   if (interaction.customId === "match_end_game") {
+    if (match.status !== "started") {
+      await interaction.deferUpdate();
+      return true;
+    }
+
     match.status = "ended";
-    saveMatch(matchData);
+saveMatch(matchData);
 
-    const oldEmbed = interaction.message.embeds[0];
-    const newEmbed = EmbedBuilder.from(oldEmbed)
-      .setColor(0xed4245)
-      .setFooter({ text: "試合終了：勝敗を選んでね" });
+await interaction.update({
+  embeds: [createEmbedFromMatch(match)],
+  components: [makeResultButtons()],
+});
 
-    await interaction.update({
-      embeds: [newEmbed],
-      components: [makeResultButtons()],
-    });
+// 全員を集合VCへ戻す
+await returnMatchMembers(interaction.guild, match);
 
     return true;
   }
@@ -271,39 +295,29 @@ if (
   if (
     interaction.customId === "match_result_a" ||
     interaction.customId === "match_result_b" ||
-    interaction.customId === "match_result_draw"
+    interaction.customId === "match_result_draw" ||
+    interaction.customId === "match_result_skip"
   ) {
-    const resultLabel =
-      interaction.customId === "match_result_a"
-        ? "TeamA勝利"
-        : interaction.customId === "match_result_b"
-        ? "TeamB勝利"
-        : "引き分け";
+    if (interaction.customId !== "match_result_skip") {
+      match.result =
+        interaction.customId === "match_result_a"
+          ? "TeamA勝利"
+          : interaction.customId === "match_result_b"
+          ? "TeamB勝利"
+          : "引き分け";
+    } else {
+      match.result = null;
+    }
 
-    match.status = "result_saved";
-    match.result = resultLabel;
-    saveMatch(matchData);
-
-    const oldEmbed = interaction.message.embeds[0];
-    const newEmbed = EmbedBuilder.from(oldEmbed)
-      .setColor(0x57f287)
-      .setFooter({ text: `結果：${resultLabel}` });
-
-    await interaction.update({
-      embeds: [newEmbed],
-      components: [makeNextMatchButtons()],
-    });
-
-    return true;
-  }
-
-  if (interaction.customId === "match_next") {
     const allUsers = getMatchParticipants(match.eventMessageId);
     const rotationSpectators = decideRotationSpectators(match, allUsers);
     const result = makeTeams(buildTeamArgs(match, rotationSpectators));
 
     if (result.error) {
-      await interaction.reply({ content: result.error, ephemeral: true });
+      await interaction.reply({
+        content: result.error,
+        ephemeral: true,
+      });
       return true;
     }
 
@@ -311,11 +325,10 @@ if (
 
     applyTeamResultToMatch(match, result);
     match.map = pickedMap;
-    match.status = "ready";
-    match.result = null;
+    match.status = "waiting";
 
     saveMatch(matchData);
-
+    
     await interaction.update({
       embeds: [createEmbedFromMatch(match)],
       components: [makeMatchButtons(), makeMatchExtraButtons()],
