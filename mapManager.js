@@ -34,6 +34,7 @@ const allMaps = [
   "Suravasa",
   "Throne of Anubis",
   "Watchpoint: Gibraltar",
+  "Neon Junction",
 ];
 
 let mapData = {
