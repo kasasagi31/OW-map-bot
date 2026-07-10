@@ -43,15 +43,35 @@ async function moveUsersToChannel(guild, userIds, channelId) {
 }
 
 async function moveMatchMembers(guild, match) {
-  if (!getVcMoveEnabled()) return;
-  if (!VC_MOVE_ENABLED) return;
-  if (!match) return;
+  console.log("=== VC移動開始 ===");
+  console.log("設定:", getVcMoveEnabled(), VC_MOVE_ENABLED);
+  console.log("VC IDs:", VC_A_ID, VC_B_ID, VC_C_ID);
+  console.log("guild:", guild?.id);
+  console.log("teamA:", match?.teamA);
+  console.log("teamB:", match?.teamB);
+  console.log("spectators:", match?.spectators);
+
+  if (!getVcMoveEnabled()) {
+    console.log("VC移動停止: matchSettingsがOFF");
+    return;
+  }
+
+  if (!VC_MOVE_ENABLED) {
+    console.log("VC移動停止: .envがOFF");
+    return;
+  }
+
+  if (!match) {
+    console.log("VC移動停止: matchなし");
+    return;
+  }
 
   await moveUsersToChannel(guild, match.teamA || [], VC_A_ID);
   await moveUsersToChannel(guild, match.teamB || [], VC_B_ID);
   await moveUsersToChannel(guild, match.spectators || [], VC_C_ID);
-}
 
+  console.log("=== VC移動終了 ===");
+}
 async function returnMatchMembers(guild, match) {
   if (!getVcMoveEnabled()) return;
   if (!VC_MOVE_ENABLED) return;
