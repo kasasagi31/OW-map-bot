@@ -17,9 +17,9 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildVoiceStates,
   ],
 });
-
 client.once("clientReady", () => {
   console.log(`${client.user.tag} でログインしました`);
 });
