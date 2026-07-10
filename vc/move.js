@@ -2,6 +2,7 @@ const {
   VC_A_ID,
   VC_B_ID,
   VC_C_ID,
+  VC_MOVE_ENABLED,
 } = require("./channels");
 
 const {
