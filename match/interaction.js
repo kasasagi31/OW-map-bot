@@ -11,10 +11,13 @@ const { getEventData } = require("../eventManager");
 const { handleMatchUserSelect } = require("./userSelect");
 const { isTeamChoiceAction } = require("../components/buttons");
 const { handleTeamChoiceButton } = require("./locks");
+const { recordMatchResult } = require("./stats");
 const {
   moveMatchMembers,
   returnMatchMembers,
 } = require("../vc");
+const { addMatchLog } = require("./export");
+
 
 const {
   decideRotationSpectators,
@@ -102,6 +105,7 @@ function buildTeamArgs(match, forcedSpectators = []) {
     forcedSpectators,
     targetDiff: getRankDiffLimit(),
     teamHistory: match.teamHistory || [],
+    sessionStats: match.sessionStats || {},
   };
 }
 
@@ -261,6 +265,7 @@ if (interaction.customId === "config_vc_move_off") {
     commitRotationResult(match, allUsers);
     commitMap(match.map);
 
+
 match.teamHistory = match.teamHistory || [];
 match.teamHistory.push({
   teamA: match.teamA || [],
@@ -318,8 +323,22 @@ await returnMatchMembers(interaction.guild, match);
       match.result = null;
     }
 
-    const allUsers = getMatchParticipants(match.eventMessageId);
-    const rotationSpectators = decideRotationSpectators(match, allUsers);
+if (interaction.customId === "match_result_a") {
+  recordMatchResult(match, "a");
+}
+
+if (interaction.customId === "match_result_b") {
+  recordMatchResult(match, "b");
+}
+
+if (interaction.customId === "match_result_draw") {
+  recordMatchResult(match, "draw");
+}
+
+// 次試合のチームで上書きされる前に、今の試合を保存
+addMatchLog(match);
+
+const allUsers = getMatchParticipants(match.eventMessageId);    const rotationSpectators = decideRotationSpectators(match, allUsers);
     const result = makeTeams(buildTeamArgs(match, rotationSpectators));
 
     if (result.error) {

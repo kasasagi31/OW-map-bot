@@ -120,6 +120,28 @@ function buildRandomTeams({
   return { teamA, teamB, spectators };
 }
 
+function getSessionScore(userId, sessionStats = {}) {
+  const stats = sessionStats[userId];
+
+  if (!stats) return 0;
+
+  return (stats.wins || 0) - (stats.losses || 0);
+}
+
+function getSessionBalancePenalty(teamA, teamB, sessionStats = {}) {
+  const scoreA = teamA.reduce(
+    (total, userId) => total + getSessionScore(userId, sessionStats),
+    0
+  );
+
+  const scoreB = teamB.reduce(
+    (total, userId) => total + getSessionScore(userId, sessionStats),
+    0
+  );
+
+  return Math.abs(scoreA - scoreB);
+}
+
 function makeTeams({
   eventMessageId,
   aPrefer = [],
@@ -130,7 +152,9 @@ function makeTeams({
   forcedSpectators = [],
   targetDiff = TARGET_DIFF,
   teamHistory = [],
+  sessionStats = {},
 }) {
+
   forcedSpectators = uniqueUsers(forcedSpectators);
   spectatorLock = uniqueUsers([...spectatorLock, ...forcedSpectators]);
 
@@ -156,6 +180,8 @@ function makeTeams({
 
   let bestResult = null;
   let bestDiff = Infinity;
+  let bestPenalty = Infinity;
+  let bestSessionPenalty = Infinity;
 
   for (let tryCount = 1; tryCount <= MAX_TRIES; tryCount++) {
     const result = buildRandomTeams({
@@ -186,7 +212,14 @@ function makeTeams({
   teamHistory
 );
 
+const sessionPenalty = getSessionBalancePenalty(
+  result.teamA,
+  result.teamB,
+  sessionStats
+);
+
 currentResult.historyPenalty = historyPenalty;
+currentResult.sessionPenalty = sessionPenalty;
 
 console.log({
   diff,
@@ -196,11 +229,21 @@ console.log({
 
 if (
   diff < bestDiff ||
-  (diff === bestDiff && historyPenalty < bestPenalty)
+  (
+    diff === bestDiff &&
+    historyPenalty < bestPenalty
+  ) ||
+  (
+    diff === bestDiff &&
+    historyPenalty === bestPenalty &&
+    sessionPenalty < bestSessionPenalty
+  )
 ) {
   bestDiff = diff;
   bestPenalty = historyPenalty;
+  bestSessionPenalty = sessionPenalty;
   bestResult = currentResult;
+}
 }
 
   if (!bestResult) {

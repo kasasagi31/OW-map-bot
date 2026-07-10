@@ -22,4 +22,10 @@ module.exports = new SlashCommandBuilder()
       .setDescription("マッチ設定を変更")
   )
 
+.addSubcommand((sub) =>
+  sub
+    .setName("export")
+    .setDescription("今回のカスタムログを書き出す")
+)
+
   .toJSON();

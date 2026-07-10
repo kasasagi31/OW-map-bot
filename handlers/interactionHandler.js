@@ -3,8 +3,10 @@ const { getRandomMessage } = require("../patoto");
 const {
   handleMatchStart,
   handleMatchConfig,
+  handleMatchExport,
   handleMatchInteraction,
 } = require("../matchManager");
+
 
 const {
   handleEventInteraction,
@@ -51,6 +53,10 @@ async function handleInteraction(interaction) {
           await handleMatchConfig(interaction);
           return;
         }
+　　　　if (subcommand === "export") {
+  await handleMatchExport(interaction);
+  return;
+}
       }
 
       if (commandName === "map") {

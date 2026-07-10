@@ -11,6 +11,7 @@ const {
 const { pickRandomMap } = require("./mapManager");
 const { makeTeams } = require("./teamManager");
 const { createMatchConfig } = require("./match/config");
+const { createExportFile } = require("./match/export");
 
 const {
   makeMatchButtons,
@@ -111,10 +112,35 @@ async function handleMatchConfig(interaction) {
   await interaction.reply(createMatchConfig());
 }
 
+async function handleMatchExport(interaction) {
+  const matchData = loadMatch();
+
+  const match = Object.values(matchData).find(
+    (m) => m.channelId === interaction.channelId
+  );
+
+  if (!match) {
+    await interaction.reply({
+      content: "このチャンネルに進行中のマッチが見つからないよ。",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const file = createExportFile(match);
+
+  await interaction.reply({
+    content: `📄 ${match.matchLogs?.length || 0}試合分のログを書き出したよ。`,
+    files: [file],
+    ephemeral: true,
+  });
+}
+
 module.exports = {
   loadMatch,
   saveMatch,
   handleMatchStart,
   handleMatchConfig,
+  handleMatchExport,
   handleMatchInteraction,
 };
