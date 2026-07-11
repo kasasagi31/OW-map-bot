@@ -39,6 +39,15 @@ const messages = {
     "✨🦆 Golden patoto「今日は勝てる気がする！」",
 　　"🦆 patoto「みんな大好き！」",
      ],
+
+   ultraRare: [
+     "仲良しごっこきっも",
+     "みんな消えていいよ",
+     "はいはいばろすばろす",
+     "どいつもこいつもガキだなぁ",
+
+
+],
 };
 
 function pick(array) {
@@ -46,8 +55,15 @@ function pick(array) {
 }
 
 function getRandomMessage() {
-  // 2%でレア
-  if (Math.random() < 0.001) {
+  const roll = Math.random();
+
+  // 0.001%：10万回に1回
+  if (roll < 0.00001) {
+    return pick(messages.ultraRare);
+  }
+
+  // 0.1%：1000回に1回
+  if (roll < 0.00101) {
     return pick(messages.rare);
   }
 
@@ -56,7 +72,6 @@ function getRandomMessage() {
 
   return pick(messages[category]);
 }
-
 function getCategoryMessage(category) {
   if (!messages[category]) {
     return "🦆 patoto「そのカテゴリは知らないかも…」";

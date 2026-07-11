@@ -109,6 +109,40 @@ function buildTeamArgs(match, forcedSpectators = []) {
   };
 }
 
+const MAP_REROLL_EGG_COUNT = 5;
+const MAP_REROLL_EGG_WINDOW_MS = 10_000;
+
+// Botが起動している間、クリック履歴を保持する
+const mapRerollClickHistory = new Map();
+
+function registerMapRerollClick(interaction) {
+  const now = Date.now();
+
+  const key = [
+    interaction.guildId,
+    interaction.message.id,
+    interaction.user.id,
+  ].join(":");
+
+  // 直近10秒以内のクリックだけ残す
+  const clicks = (mapRerollClickHistory.get(key) ?? [])
+    .filter((clickedAt) => now - clickedAt <= MAP_REROLL_EGG_WINDOW_MS);
+
+  clicks.push(now);
+
+  console.log(
+    `[イースターエッグ] ${interaction.user.username}: ${clicks.length}/${MAP_REROLL_EGG_COUNT}`
+  );
+
+  if (clicks.length >= MAP_REROLL_EGG_COUNT) {
+    mapRerollClickHistory.delete(key);
+    return true;
+  }
+
+  mapRerollClickHistory.set(key, clicks);
+  return false;
+}
+
 async function handleMatchInteraction(interaction) {
   if (interaction.isModalSubmit()) {
     return await handleMatchModal(interaction);
@@ -190,7 +224,7 @@ if (interaction.customId === "config_vc_move_off") {
     await showUnlockUserSelect(interaction);
     return true;
   }
-
+    
   if (interaction.customId === "match_team_reroll") {
     const result = makeTeams(buildTeamArgs(match));
 
@@ -211,45 +245,62 @@ if (interaction.customId === "config_vc_move_off") {
   }
 
   if (interaction.customId === "match_map_reroll") {
-    const { pickedMap } = pickRandomMap();
+  const easterEggFound = registerMapRerollClick(interaction);
 
-    match.map = pickedMap;
-    saveMatch(matchData);
+  const { pickedMap } = pickRandomMap();
 
-    await interaction.update({
-      embeds: [createEmbedFromMatch(match)],
-      components: interaction.message.components,
+  match.map = pickedMap;
+  saveMatch(matchData);
+
+  await interaction.update({
+    embeds: [createEmbedFromMatch(match)],
+    components: interaction.message.components,
+  });
+
+  if (easterEggFound) {
+    await interaction.followUp({
+      content:
+        "💣 **爆弾を発見しました**\n" +
+        "開発者の怒りがここに埋められていました。\n" +
+        "不発処理済みです。",
+      ephemeral: true,
     });
+  }
 
+  return true;
+}
+if (interaction.customId === "match_all_reroll") {
+  // 先にボタン操作へ応答
+  await interaction.deferUpdate();
+
+  const allUsers = getMatchParticipants(match.eventMessageId);
+  const rotationSpectators = decideRotationSpectators(match, allUsers);
+  const result = makeTeams(buildTeamArgs(match, rotationSpectators));
+
+  if (result.error) {
+    await interaction.followUp({
+      content: result.error,
+      ephemeral: true,
+    });
     return true;
   }
 
-  if (interaction.customId === "match_all_reroll") {
-    const allUsers = getMatchParticipants(match.eventMessageId);
-    const rotationSpectators = decideRotationSpectators(match, allUsers);
-    const result = makeTeams(buildTeamArgs(match, rotationSpectators));
+  const { pickedMap } = pickRandomMap();
 
-    if (result.error) {
-      await interaction.reply({ content: result.error, ephemeral: true });
-      return true;
-    }
+  applyTeamResultToMatch(match, result);
+  match.map = pickedMap;
+  saveMatch(matchData);
 
-    const { pickedMap } = pickRandomMap();
+  console.log("matchNumber =", match.matchNumber);
 
-    applyTeamResultToMatch(match, result);
-    match.map = pickedMap;
-    saveMatch(matchData);
+  // deferUpdate後なので update ではなく editReply
+  await interaction.editReply({
+    embeds: [createEmbedFromMatch(match)],
+    components: interaction.message.components,
+  });
 
-    console.log("matchNumber =", match.matchNumber);
-
-    await interaction.update({
-      embeds: [createEmbedFromMatch(match)],
-      components: interaction.message.components,
-    });
-
-    return true;
-  }
-  if (interaction.customId === "match_start_game") {
+  return true;
+}  if (interaction.customId === "match_start_game") {
     if (match.status === "started") {
       await interaction.deferUpdate();
       return true;
